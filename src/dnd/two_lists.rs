@@ -6,6 +6,30 @@ pub struct TwoLists {
     list_2: Vec<Item>,
 }
 
+type IterNextInnerFn<'a> =
+    Box<dyn Fn(&mut egui::Ui, hello_egui::dnd::Handle, hello_egui::dnd::ItemState) + 'a>;
+
+fn draw_list<'a, T>(list: &'a [Item], dnd_idx: &mut usize, mut iter_next: T)
+where
+    T: FnMut(egui::Id, usize, IterNextInnerFn<'a>),
+{
+    for item in list {
+        iter_next(
+            egui::Id::new(item.id),
+            *dnd_idx,
+            Box::new(
+                |ui: &mut egui::Ui,
+                 handle: hello_egui::dnd::Handle,
+                 _item_state: hello_egui::dnd::ItemState| {
+                    item.ui(ui, handle);
+                },
+            ),
+        );
+
+        *dnd_idx += 1;
+    }
+}
+
 impl TwoLists {
     pub fn new(start_id: usize, num_items_per_area: usize) -> Self {
         let mut list_1 = Vec::<Item>::new();
@@ -22,42 +46,28 @@ impl TwoLists {
     pub fn ui(&mut self, ui: &mut egui::Ui) {
         let mut idx = 0usize;
         let response = hello_egui::dnd::dnd(ui, "dnd_two_lists").show_custom(|ui, iter| {
-            // Draw first list
-            for item in &self.list_1 {
-                iter.next(ui, egui::Id::new(item.id), idx, true, |ui, dnd_item| {
-                    dnd_item.ui(ui, |ui, handle, _item_state| {
-                        item.ui(ui, handle);
-                    })
-                });
+            let mut iter_next = |id: egui::Id, idx: usize, f: IterNextInnerFn| {
+                iter.next(ui, id, idx, true, |ui, dnd_item| dnd_item.ui(ui, f));
+            };
 
-                idx += 1;
-            }
+            // Draw first list
+            draw_list(&self.list_1, &mut idx, &mut iter_next);
 
             // Draw separator
-            iter.next(
-                ui,
+            iter_next(
                 egui::Id::new("dnd_two_lists_separator"),
                 idx,
-                true,
-                |ui, dnd_item| {
-                    dnd_item.ui(ui, |ui, _handle, _item_state| {
+                Box::new(
+                    |ui: &mut egui::Ui,
+                     _handle: hello_egui::dnd::Handle,
+                     _item_state: hello_egui::dnd::ItemState| {
                         ui.separator();
-                    })
-                },
+                    },
+                ),
             );
 
-            idx += 1;
-
             // Draw second list
-            for item in &self.list_2 {
-                iter.next(ui, egui::Id::new(item.id), idx, true, |ui, dnd_item| {
-                    dnd_item.ui(ui, |ui, handle, _item_state| {
-                        item.ui(ui, handle);
-                    })
-                });
-
-                idx += 1;
-            }
+            draw_list(&self.list_2, &mut idx, &mut iter_next);
         });
 
         if let Some(update) = response.update {
