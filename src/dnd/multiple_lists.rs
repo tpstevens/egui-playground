@@ -1,5 +1,7 @@
 use crate::dnd::item::Item;
 
+/// A structure that contains multiple lists (separated with a horizontal line) whose items can be
+/// dragged freely between them.
 pub struct MultipleLists {
     lists: Vec<ItemList>,
 
@@ -12,6 +14,7 @@ struct ItemList {
     items: Vec<Item>,
 }
 
+/// Pairs a list index and an item index (relative to that list, not the overall dnd index).
 struct ListAndItemIdx {
     list_index: usize,
     list_internal_index: usize,

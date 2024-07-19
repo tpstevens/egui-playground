@@ -4,6 +4,9 @@
 use crate::dnd::item::Item;
 use std::hash::{Hash, Hasher};
 
+/// Allows drawing nested lists whose items can only be dragged internally (not across list boundaries).
+///
+/// Only supports nested lists that are 2 deep!
 pub struct SeparateNestedLists {
     name: String,
     root: Vec<ItemList>,

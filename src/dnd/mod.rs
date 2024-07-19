@@ -23,7 +23,8 @@ pub fn run_demo() -> eframe::Result {
         move |ctx, _frame| {
             egui::containers::panel::CentralPanel::default().show(ctx, |ui| {
                 ui.columns(4, |columns| {
-                    columns[0].label("Two lists");
+                    columns[0].heading("Two lists");
+                    columns[0].label("(items can be dragged freely across the separator)");
                     columns[0].separator();
                     egui::ScrollArea::vertical()
                         .id_source("scroll_simple_separator")
@@ -31,11 +32,15 @@ pub fn run_demo() -> eframe::Result {
                             two_lists.ui(ui);
                         });
 
-                    columns[1].label("Two scroll areas");
+                    columns[1].heading("Two scroll areas");
+                    columns[1].label(
+                        "(items can be dragged between the scroll areas with some visual glitches)",
+                    );
                     columns[1].separator();
                     two_scroll_areas.ui(&mut columns[1]);
 
-                    columns[2].label("Multiple lists");
+                    columns[2].heading("Multiple lists");
+                    columns[2].label("(items can be dragged freely between all lists)");
                     columns[2].separator();
                     egui::ScrollArea::vertical()
                         .id_source("scroll_multiple_lists")
@@ -43,7 +48,10 @@ pub fn run_demo() -> eframe::Result {
                             multiple_lists.ui(ui);
                         });
 
-                    columns[3].label("Separate nested lists");
+                    columns[3].heading("Separate nested lists");
+                    columns[3].label(
+                        "(items can be dragged within a list, including items in the root list!)",
+                    );
                     columns[3].separator();
                     egui::ScrollArea::vertical()
                         .id_source("scroll_nested_lists")

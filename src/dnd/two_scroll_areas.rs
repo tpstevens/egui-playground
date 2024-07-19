@@ -1,5 +1,9 @@
 use crate::dnd::item::Item;
 
+/// Two lists separated by a horizontal line that have independent ScrollAreas.
+///
+/// Not a good idea in practice, as there's some visual glitches when both areas are partially
+/// scrolled (both lists shift even when dragging an element within one).
 pub struct TwoScrollAreas {
     list_1: Vec<Item>,
     list_2: Vec<Item>,
@@ -21,7 +25,9 @@ impl TwoScrollAreas {
     pub fn ui(&mut self, ui: &mut egui::Ui) {
         let mut idx = 0usize;
         let response = hello_egui::dnd::dnd(ui, "dnd_two_scroll_areas").show_custom(|ui, iter| {
-            let (first, _) = ui.max_rect().split_top_bottom_at_fraction(0.5);
+            let (first, _) = ui
+                .available_rect_before_wrap()
+                .split_top_bottom_at_fraction(0.5);
 
             // Draw first list
             ui.allocate_ui_at_rect(first, |ui| {

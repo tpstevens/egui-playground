@@ -1,5 +1,6 @@
 use crate::dnd::item::Item;
 
+/// Two unified lists that are separated by a horizontal line.
 pub struct TwoLists {
     list_1: Vec<Item>,
     list_2: Vec<Item>,
