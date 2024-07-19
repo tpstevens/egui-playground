@@ -4,7 +4,7 @@
 use crate::dnd::item::Item;
 use std::hash::{Hash, Hasher};
 
-pub struct NestedLists {
+pub struct SeparateNestedLists {
     name: String,
     root: Vec<ItemList>,
 }
@@ -20,7 +20,7 @@ impl Hash for ItemList {
     }
 }
 
-impl NestedLists {
+impl SeparateNestedLists {
     pub fn new(name: String, start_id: usize, num_items_per_list: usize) -> (Self, usize) {
         let mut next_id_storage = start_id;
 

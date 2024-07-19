@@ -17,12 +17,12 @@ impl TwoLists {
 
         Self { list_1, list_2 }
     }
-    
+
     pub fn ui(&mut self, ui: &mut egui::Ui) {
         let mut idx = 0usize;
         let response = hello_egui::dnd::dnd(ui, "dnd_two_lists").show_custom(|ui, iter| {
             // Draw first list
-            for item in &self.list_1{
+            for item in &self.list_1 {
                 iter.next(ui, egui::Id::new(item.id), idx, true, |ui, dnd_item| {
                     dnd_item.ui(ui, |ui, handle, _item_state| {
                         item.ui(ui, handle);
@@ -46,9 +46,9 @@ impl TwoLists {
             );
 
             idx += 1;
-            
+
             // Draw second list
-            for item in &self.list_2{
+            for item in &self.list_2 {
                 iter.next(ui, egui::Id::new(item.id), idx, true, |ui, dnd_item| {
                     dnd_item.ui(ui, |ui, handle, _item_state| {
                         item.ui(ui, handle);
@@ -57,7 +57,6 @@ impl TwoLists {
 
                 idx += 1;
             }
-            
         });
 
         if let Some(update) = response.update {

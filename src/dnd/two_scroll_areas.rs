@@ -22,7 +22,7 @@ impl TwoScrollAreas {
         let mut idx = 0usize;
         let response = hello_egui::dnd::dnd(ui, "dnd_two_scroll_areas").show_custom(|ui, iter| {
             let (first, _) = ui.max_rect().split_top_bottom_at_fraction(0.5);
-            
+
             // Draw first list
             ui.allocate_ui_at_rect(first, |ui| {
                 egui::ScrollArea::vertical()

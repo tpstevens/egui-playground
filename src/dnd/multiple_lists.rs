@@ -21,7 +21,7 @@ struct ListAndItemIdx {
 /// with each call to `egui_dnd::dnd::show_custom()`'s iterator)
 struct ListDndIdxBounds {
     start: usize,
-    end: usize
+    end: usize,
 }
 
 impl MultipleLists {
@@ -40,9 +40,9 @@ impl MultipleLists {
                 id: format!("multi_list_{i}"),
                 items,
             });
-            lists_dnd_idx_bounds.push(ListDndIdxBounds{start: 0, end: 0});
+            lists_dnd_idx_bounds.push(ListDndIdxBounds { start: 0, end: 0 });
         }
-        
+
         Self {
             lists,
             lists_dnd_idx_bounds,
@@ -104,8 +104,11 @@ impl MultipleLists {
         });
 
         if let Some(update) = response.update {
-            let from =
-                convert_dnd_idx_to_list_and_item_idx(&self.lists_dnd_idx_bounds, update.from, false);
+            let from = convert_dnd_idx_to_list_and_item_idx(
+                &self.lists_dnd_idx_bounds,
+                update.from,
+                false,
+            );
             let to =
                 convert_dnd_idx_to_list_and_item_idx(&self.lists_dnd_idx_bounds, update.to, true);
 

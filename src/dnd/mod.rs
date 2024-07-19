@@ -1,12 +1,12 @@
 mod item;
 mod multiple_lists;
-mod nested_lists;
+mod separate_nested_lists;
 mod two_lists;
 mod two_scroll_areas;
 mod util;
 
 use multiple_lists::MultipleLists;
-use nested_lists::NestedLists;
+use separate_nested_lists::SeparateNestedLists;
 use two_lists::TwoLists;
 use two_scroll_areas::TwoScrollAreas;
 
@@ -14,7 +14,8 @@ pub fn run_demo() -> eframe::Result {
     let mut two_lists = TwoLists::new(0, 40);
     let mut two_scroll_areas = TwoScrollAreas::new(10000, 50);
     let mut multiple_lists = MultipleLists::new(6, 20000, 10);
-    let (mut nested_lists, _) = NestedLists::new("nested list root".to_string(), 30000, 10);
+    let (mut separate_nested_lists, _) =
+        SeparateNestedLists::new("nested list root".to_string(), 30000, 10);
 
     eframe::run_simple_native(
         "egui_playground_dnd",
@@ -42,12 +43,12 @@ pub fn run_demo() -> eframe::Result {
                             multiple_lists.ui(ui);
                         });
 
-                    columns[3].label("Nested lists");
+                    columns[3].label("Separate nested lists");
                     columns[3].separator();
                     egui::ScrollArea::vertical()
                         .id_source("scroll_nested_lists")
                         .show(&mut columns[3], |ui| {
-                            nested_lists.ui(ui);
+                            separate_nested_lists.ui(ui);
                         });
                 });
             });
