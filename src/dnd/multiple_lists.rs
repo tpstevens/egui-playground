@@ -14,12 +14,9 @@ struct ItemList {
     items: Vec<Item>,
 }
 
-type IterNextFn<'a> =
-    Box<dyn Fn(&mut egui::Ui, hello_egui::dnd::Handle, hello_egui::dnd::ItemState) + 'a>;
-
 impl ItemList {
     /// Draws the list, updating the dnd index bounds that correspond to the list's start and end.
-    /// 
+    ///
     /// This example assumes that each sub-structure of `MultipleLists` is only one list (and thus
     /// it's reasonable to update a single `ListDndIdxBounds` structure). If `ItemList` was a more
     /// complex structure, `ui()` would need to take a reference to
@@ -27,44 +24,43 @@ impl ItemList {
     /// could be used to track which sub-lists belong to which struct. That might also make it
     /// challenging to handle construction of `lists_dnd_idx_bounds` -- for really dynamic
     /// structures, it would have to be created and filled out on each frame.
-    fn ui<'a, T>(
-        &'a self,
+    fn ui(
+        &self,
+        ui: &mut egui::Ui,
+        dnd_item_iter: &mut hello_egui::dnd::item_iterator::ItemIterator,
         dnd_idx: &mut usize,
-        bounds: &mut ListDndIdxBounds,
         draw_header: bool,
-        mut f: T,
-    ) where
-        T: FnMut(egui::Id, usize, IterNextFn<'a>),
-    {
+        bounds: &mut ListDndIdxBounds,
+    ) {
         if draw_header {
-            println!("drawing header for {}", self.id);
-            f(
+            dnd_item_iter.next(
+                ui,
                 egui::Id::new(format!("separator_{}", self.id)),
                 *dnd_idx,
-                Box::new(
-                    |ui: &mut egui::Ui,
-                     _handle: hello_egui::dnd::Handle,
-                     _item_state: hello_egui::dnd::ItemState| {
+                true,
+                |ui, dnd_item| {
+                    dnd_item.ui(ui, |ui, _handle, _item_state| {
                         ui.separator();
                         self.draw_header(ui);
-                    },
-                ),
+                    })
+                },
             );
+
             *dnd_idx += 1;
         }
 
         bounds.start = *dnd_idx;
         for item in &self.items {
-            f(
+            dnd_item_iter.next(
+                ui,
                 egui::Id::new(item.id),
                 *dnd_idx,
-                Box::new(
-                    |ui: &mut egui::Ui,
-                     handle: hello_egui::dnd::Handle,
-                     _item_state: hello_egui::dnd::ItemState| {
+                true,
+                |ui, dnd_item| {
+                    dnd_item.ui(ui, |ui, handle, _item_state| {
                         item.ui(ui, handle);
-                    },
-                ),
+                    })
+                },
             );
 
             *dnd_idx += 1;
@@ -122,17 +118,8 @@ impl MultipleLists {
         self.lists[0].draw_header(ui);
 
         let response = hello_egui::dnd::dnd(ui, "dnd_multiple_lists").show_custom(|ui, iter| {
-            let mut iter_next = |id: egui::Id, idx: usize, f: IterNextFn| {
-                iter.next(ui, id, idx, true, |ui, dnd_item| dnd_item.ui(ui, f));
-            };
-
             for i in 0..self.lists.len() {
-                self.lists[i].ui(
-                    &mut idx,
-                    &mut self.lists_dnd_idx_bounds[i],
-                    i > 0,
-                    &mut iter_next,
-                );
+                self.lists[i].ui(ui, iter, &mut idx, i > 0, &mut self.lists_dnd_idx_bounds[i]);
             }
         });
 

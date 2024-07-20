@@ -476,8 +476,7 @@ dependencies = [
 [[package]]
 name = "egui_animation"
 version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "de03cb7a84fa23cc4ff54b29740c83adc3dac68448d5282a967b52aaa3f4960e"
+source = "git+https://github.com/tpstevens/hello_egui.git?branch=pub_item_iterator#5f4eea500af4cab2e2d6d799883b438f015ac4fd"
 dependencies = [
  "egui",
  "hello_egui_utils",
@@ -487,8 +486,7 @@ dependencies = [
 [[package]]
 name = "egui_dnd"
 version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c485135fa6dcb0cfef807dc55a5c9dbd8d24c060da75def84bfb02337b1731f5"
+source = "git+https://github.com/tpstevens/hello_egui.git?branch=pub_item_iterator#5f4eea500af4cab2e2d6d799883b438f015ac4fd"
 dependencies = [
  "egui",
  "egui_animation",
@@ -499,8 +497,7 @@ dependencies = [
 [[package]]
 name = "egui_form"
 version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "63a28c4bdcee6da511862fd59109c38d0002443920dd13146dfbc9ef2cc1ee3f"
+source = "git+https://github.com/tpstevens/hello_egui.git?branch=pub_item_iterator#5f4eea500af4cab2e2d6d799883b438f015ac4fd"
 dependencies = [
  "egui",
 ]
@@ -524,8 +521,7 @@ dependencies = [
 [[package]]
 name = "egui_inbox"
 version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "762d687edef692c88db02198d149ce68758c386b06ab5e9b97bc66a0a7817cdb"
+source = "git+https://github.com/tpstevens/hello_egui.git?branch=pub_item_iterator#5f4eea500af4cab2e2d6d799883b438f015ac4fd"
 dependencies = [
  "egui",
  "parking_lot",
@@ -534,8 +530,7 @@ dependencies = [
 [[package]]
 name = "egui_infinite_scroll"
 version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "998a089aa9c5a0685ff3a7d37cb28e5c6359fc61275985e95324abd6456e4236"
+source = "git+https://github.com/tpstevens/hello_egui.git?branch=pub_item_iterator#5f4eea500af4cab2e2d6d799883b438f015ac4fd"
 dependencies = [
  "egui",
  "egui_inbox",
@@ -556,8 +551,7 @@ dependencies = [
 [[package]]
 name = "egui_pull_to_refresh"
 version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "feccede267b2e06803f994a5ee6341dc73012fa91482d11ddf856e5c8d6c44a1"
+source = "git+https://github.com/tpstevens/hello_egui.git?branch=pub_item_iterator#5f4eea500af4cab2e2d6d799883b438f015ac4fd"
 dependencies = [
  "egui",
 ]
@@ -565,8 +559,7 @@ dependencies = [
 [[package]]
 name = "egui_router"
 version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a2dbabbb9dee27d3d5cc119cf1ea4f1bc845e01e046c32af8bda4fb2e73c3bd0"
+source = "git+https://github.com/tpstevens/hello_egui.git?branch=pub_item_iterator#5f4eea500af4cab2e2d6d799883b438f015ac4fd"
 dependencies = [
  "egui",
  "egui_inbox",
@@ -580,8 +573,7 @@ dependencies = [
 [[package]]
 name = "egui_suspense"
 version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc6fa0320ea8ce3df0fc1a0eec030cba8ef022a75ff95e7eab16b3b84afa9280"
+source = "git+https://github.com/tpstevens/hello_egui.git?branch=pub_item_iterator#5f4eea500af4cab2e2d6d799883b438f015ac4fd"
 dependencies = [
  "egui",
  "egui_inbox",
@@ -591,8 +583,7 @@ dependencies = [
 [[package]]
 name = "egui_thumbhash"
 version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6fa386508656397a976cecf3a89e60305c0f0961d13dff2940de440089f50c9b"
+source = "git+https://github.com/tpstevens/hello_egui.git?branch=pub_item_iterator#5f4eea500af4cab2e2d6d799883b438f015ac4fd"
 dependencies = [
  "base64",
  "egui",
@@ -602,8 +593,7 @@ dependencies = [
 [[package]]
 name = "egui_virtual_list"
 version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa006333a04fb5ed773a5e963bb366831046f6f462b7528059924deae008f8a0"
+source = "git+https://github.com/tpstevens/hello_egui.git?branch=pub_item_iterator#5f4eea500af4cab2e2d6d799883b438f015ac4fd"
 dependencies = [
  "egui",
  "web-time 1.1.0",
@@ -829,8 +819,7 @@ checksum = "e5274423e17b7c9fc20b6e7e208532f9b19825d82dfd615708b70edd83df41f1"
 [[package]]
 name = "hello_egui"
 version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "42a0b96bca56a51aa0609a6f62c420983c4dc1fbdffe9ef2fd1f3fe81e8db4c6"
+source = "git+https://github.com/tpstevens/hello_egui.git?branch=pub_item_iterator#5f4eea500af4cab2e2d6d799883b438f015ac4fd"
 dependencies = [
  "egui_animation",
  "egui_dnd",
@@ -847,8 +836,7 @@ dependencies = [
 [[package]]
 name = "hello_egui_utils"
 version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3d37ead3094debbbba23dfeeb5afd02eab8f3c92c85e717711e7cf8dfd9e4aa5"
+source = "git+https://github.com/tpstevens/hello_egui.git?branch=pub_item_iterator#5f4eea500af4cab2e2d6d799883b438f015ac4fd"
 dependencies = [
  "concat-idents",
  "egui",

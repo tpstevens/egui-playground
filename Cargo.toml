@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 egui = "0.28"
-hello_egui = { version = "0.5" , features = ["all"] }
+hello_egui = { git = "https://github.com/tpstevens/hello_egui.git", branch = "pub_item_iterator", features = ["all"] }
 
 [dependencies.eframe]
 version = "0.28"
