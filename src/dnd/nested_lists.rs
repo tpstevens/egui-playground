@@ -1,7 +1,5 @@
 use crate::dnd::item::Item;
 
-const LIST_INDENT: f32 = 20f32;
-
 /// A structure that allows arbitrary nested lists where any item in the list can be dragged to any
 /// other list (except to one of its child lists).
 ///
@@ -117,15 +115,6 @@ impl ItemList {
                 dnd_item.ui(ui, |ui, handle, item_state| {
                     self.dnd_dragged = item_state.dragged;
                     self.item.ui(ui, handle);
-
-                    if !self.dnd_dragged {
-                        ui.horizontal(|ui| {
-                            ui.add_space(LIST_INDENT);
-                            ui.vertical(|ui| {
-                                ui.separator();
-                            })
-                        });
-                    }
                 })
             },
         );
@@ -133,31 +122,28 @@ impl ItemList {
 
         // Draw children if not being dragged
         if !self.dnd_dragged {
-            ui.horizontal(|ui| {
-                ui.add_space(LIST_INDENT);
-                ui.vertical(|ui| {
-                    let start = *dnd_idx;
-                    for child_idx in 0..self.children.len() {
-                        self.children[child_idx].ui(ui, dnd_item_iter, dnd_idx);
-                    }
+            ui.indent(format!("{}_indent", self.item.id), |ui| {
+                let start = *dnd_idx;
+                for child_idx in 0..self.children.len() {
+                    self.children[child_idx].ui(ui, dnd_item_iter, dnd_idx);
+                }
 
-                    dnd_item_iter.next(
-                        ui,
-                        egui::Id::new(format!("{}_end_separator", self.item.id)),
-                        *dnd_idx,
-                        true,
-                        |ui, dnd_item| {
-                            dnd_item.ui(ui, |ui, _handle, _item_state| {
-                                ui.separator();
-                            })
-                        },
-                    );
-                    self.dnd_children_idx_bounds = DndIdxBounds {
-                        start,
-                        end: *dnd_idx,
-                    };
-                    *dnd_idx += 1;
-                });
+                dnd_item_iter.next(
+                    ui,
+                    egui::Id::new(format!("{}_end_separator", self.item.id)),
+                    *dnd_idx,
+                    true,
+                    |ui, dnd_item| {
+                        dnd_item.ui(ui, |ui, _handle, _item_state| {
+                            ui.separator();
+                        })
+                    },
+                );
+                self.dnd_children_idx_bounds = DndIdxBounds {
+                    start,
+                    end: *dnd_idx,
+                };
+                *dnd_idx += 1;
             });
         }
 

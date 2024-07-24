@@ -1,8 +1,6 @@
 use crate::dnd::item::Item;
 use std::hash::{Hash, Hasher};
 
-const LIST_INDENT: f32 = 20f32;
-
 /// Allows drawing nested lists whose items can only be dragged internally (not across list boundaries).
 ///
 /// Only supports nested lists that are 2 deep!
@@ -59,16 +57,13 @@ impl SeparateNestedLists {
             |ui, item_list, handle, _| {
                 item_list.item.ui(ui, handle);
                 if let Some(children) = &mut item_list.children {
-                    ui.horizontal(|ui| {
-                        ui.add_space(LIST_INDENT);
-                        ui.vertical(|ui| {
-                            hello_egui::dnd::dnd(ui, item_list.item.id.to_string()).show_vec(
-                                children,
-                                |ui, item_list, handle, _| {
-                                    item_list.item.ui(ui, handle);
-                                },
-                            )
-                        });
+                    ui.indent(format!("{}_indent", item_list.item.id), |ui| {
+                        hello_egui::dnd::dnd(ui, item_list.item.id.to_string()).show_vec(
+                            children,
+                            |ui, item_list, handle, _| {
+                                item_list.item.ui(ui, handle);
+                            },
+                        )
                     });
                 }
             },
