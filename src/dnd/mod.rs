@@ -1,3 +1,4 @@
+mod collapsible_nested_lists;
 mod item;
 mod multiple_lists;
 mod nested_lists;
@@ -6,6 +7,7 @@ mod two_lists;
 mod two_scroll_areas;
 mod util;
 
+use crate::dnd::collapsible_nested_lists::CollapsibleNestedLists;
 use crate::dnd::multiple_lists::MultipleLists;
 use crate::dnd::nested_lists::NestedLists;
 use crate::dnd::separate_nested_lists::SeparateNestedLists;
@@ -30,15 +32,17 @@ pub fn run_demo() -> eframe::Result {
     let (mut separate_nested_lists, _) =
         SeparateNestedLists::new("separate nested list root".to_string(), 30000, 10);
     let (mut nested_lists, _) = NestedLists::new("nested_list_root".to_string(), 40000, 3, 2);
+    let (mut collapsible_nested_lists, _) =
+        CollapsibleNestedLists::new("collapsible_nested_list_root".to_string(), 50000, 3, 2);
 
     let native_options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_min_inner_size([1000.0, 600.0]),
+        viewport: egui::ViewportBuilder::default().with_min_inner_size([1200.0, 600.0]),
         ..Default::default()
     };
 
     eframe::run_simple_native("egui_playground_dnd", native_options, move |ctx, _frame| {
         egui::containers::panel::CentralPanel::default().show(ctx, |ui| {
-            ui.columns(5, |columns| {
+            ui.columns(6, |columns| {
                 dnd_demo(
                     &mut columns[0],
                     "Two lists",
@@ -96,6 +100,19 @@ pub fn run_demo() -> eframe::Result {
                             .id_source("scroll_nested_lists")
                             .show(ui, |ui| {
                                 nested_lists.ui(ui);
+                            });
+                    },
+                );
+
+                dnd_demo(
+                    &mut columns[5],
+                    "Collapsible nested lists",
+                    "(items can be collapsed and dragged between any list)",
+                    |ui| {
+                        egui::ScrollArea::vertical()
+                            .id_source("scroll_collapsible_nested_lists")
+                            .show(ui, |ui| {
+                                collapsible_nested_lists.ui(ui);
                             });
                     },
                 );
