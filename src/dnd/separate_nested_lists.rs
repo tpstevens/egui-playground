@@ -1,8 +1,7 @@
-// next: detect the current list and don't allow dragging into any children?
-// might be slicker to collapse the list when dragging, then can move freely
-
 use crate::dnd::item::Item;
 use std::hash::{Hash, Hasher};
+
+const LIST_INDENT: f32 = 20f32;
 
 /// Allows drawing nested lists whose items can only be dragged internally (not across list boundaries).
 ///
@@ -55,28 +54,24 @@ impl SeparateNestedLists {
     }
 
     pub fn ui(&mut self, ui: &mut egui::Ui) {
-        ui.label(self.name.as_str());
-        ui.horizontal(|ui| {
-            ui.add_space(10f32);
-            ui.vertical(|ui| {
-                hello_egui::dnd::dnd(ui, self.name.as_str()).show_vec(
-                    &mut self.root,
-                    |ui, item_list, handle, _| {
-                        item_list.item.ui(ui, handle);
-                        if let Some(children) = &mut item_list.children {
-                            ui.horizontal(|ui| {
-                                ui.add_space(10f32);
-                                ui.vertical(|ui| {
-                                    hello_egui::dnd::dnd(ui, item_list.item.id.to_string())
-                                        .show_vec(children, |ui, item_list, handle, _| {
-                                            item_list.item.ui(ui, handle);
-                                        })
-                                });
-                            });
-                        }
-                    },
-                );
-            });
-        });
+        hello_egui::dnd::dnd(ui, self.name.as_str()).show_vec(
+            &mut self.root,
+            |ui, item_list, handle, _| {
+                item_list.item.ui(ui, handle);
+                if let Some(children) = &mut item_list.children {
+                    ui.horizontal(|ui| {
+                        ui.add_space(LIST_INDENT);
+                        ui.vertical(|ui| {
+                            hello_egui::dnd::dnd(ui, item_list.item.id.to_string()).show_vec(
+                                children,
+                                |ui, item_list, handle, _| {
+                                    item_list.item.ui(ui, handle);
+                                },
+                            )
+                        });
+                    });
+                }
+            },
+        );
     }
 }
