@@ -15,16 +15,6 @@ use crate::dnd::two_lists::TwoLists;
 use crate::dnd::two_scroll_areas::TwoScrollAreas;
 use std::default::Default;
 
-fn dnd_demo(ui: &mut egui::Ui, heading: &str, description: &str, f: impl FnOnce(&mut egui::Ui)) {
-    // Ensure that text isn't justified
-    ui.with_layout(egui::Layout::top_down(egui::Align::Min), |ui| {
-        ui.heading(heading);
-        ui.label(description);
-    });
-    ui.separator();
-    f(ui);
-}
-
 pub fn run_demo() -> eframe::Result {
     let mut two_lists = TwoLists::new(0, 40);
     let mut two_scroll_areas = TwoScrollAreas::new(10000, 50);
@@ -43,80 +33,109 @@ pub fn run_demo() -> eframe::Result {
     eframe::run_simple_native("egui_playground_dnd", native_options, move |ctx, _frame| {
         egui::containers::panel::CentralPanel::default().show(ctx, |ui| {
             ui.columns(6, |columns| {
-                dnd_demo(
-                    &mut columns[0],
-                    "Two lists",
-                    "(items can be dragged freely across the separator)",
-                    |ui| {
-                        egui::ScrollArea::vertical()
-                            .id_source("scroll_simple_separator")
-                            .show(ui, |ui| {
-                                two_lists.ui(ui);
-                            });
-                    },
-                );
-
-                dnd_demo(
-                    &mut columns[1],
-                    "Two scroll areas",
-                    "(items can be dragged between the scroll areas with some visual glitches)",
-                    |ui| {
-                        two_scroll_areas.ui(ui);
-                    },
-                );
-
-                dnd_demo(
-                    &mut columns[2],
-                    "Multiple lists",
-                    "(items can be dragged freely between all lists)",
-                    |ui| {
-                        egui::ScrollArea::vertical()
-                            .id_source("scroll_multiple_lists")
-                            .show(ui, |ui| {
-                                multiple_lists.ui(ui);
-                            });
-                    },
-                );
-
-                dnd_demo(
-                    &mut columns[3],
-                    "Separate nested lists",
-                    "(items can be dragged within a list, including items in the root list!)",
-                    |ui| {
-                        egui::ScrollArea::vertical()
-                            .id_source("scroll_separate_nested_lists")
-                            .show(ui, |ui| {
-                                separate_nested_lists.ui(ui);
-                            });
-                    },
-                );
-
-                dnd_demo(
-                    &mut columns[4],
-                    "Unified nested lists",
-                    "(items can be dragged between any list)",
-                    |ui| {
-                        egui::ScrollArea::vertical()
-                            .id_source("scroll_nested_lists")
-                            .show(ui, |ui| {
-                                nested_lists.ui(ui);
-                            });
-                    },
-                );
-
-                dnd_demo(
-                    &mut columns[5],
-                    "Collapsible nested lists",
-                    "(items can be collapsed and dragged between any list)",
-                    |ui| {
-                        egui::ScrollArea::vertical()
-                            .id_source("scroll_collapsible_nested_lists")
-                            .show(ui, |ui| {
-                                collapsible_nested_lists.ui(ui);
-                            });
-                    },
-                );
+                demo_two_lists(&mut columns[0], &mut two_lists);
+                demo_two_scroll_areas(&mut columns[1], &mut two_scroll_areas);
+                demo_multiple_lists(&mut columns[2], &mut multiple_lists);
+                demo_separate_nested_lists(&mut columns[3], &mut separate_nested_lists);
+                demo_unified_nested_lists(&mut columns[4], &mut nested_lists);
+                demo_collapsible_nested_lists(&mut columns[5], &mut collapsible_nested_lists);
             });
         });
     })
+}
+
+fn dnd_demo(ui: &mut egui::Ui, heading: &str, description: &str, f: impl FnOnce(&mut egui::Ui)) {
+    // Ensure that text isn't justified
+    ui.with_layout(egui::Layout::top_down(egui::Align::Min), |ui| {
+        ui.heading(heading);
+        ui.label(description);
+    });
+    ui.separator();
+    f(ui);
+}
+
+fn demo_two_lists(ui: &mut egui::Ui, list: &mut TwoLists) {
+    dnd_demo(
+        ui,
+        "Two lists",
+        "(items can be dragged freely across the separator)",
+        |ui| {
+            egui::ScrollArea::vertical()
+                .id_source("scroll_simple_separator")
+                .show(ui, |ui| {
+                    list.ui(ui);
+                });
+        },
+    );
+}
+
+fn demo_two_scroll_areas(ui: &mut egui::Ui, list: &mut TwoScrollAreas) {
+    dnd_demo(
+        ui,
+        "Two scroll areas",
+        "(items can be dragged between the scroll areas with some visual glitches)",
+        |ui| {
+            list.ui(ui);
+        },
+    );
+}
+
+fn demo_multiple_lists(ui: &mut egui::Ui, list: &mut MultipleLists) {
+    dnd_demo(
+        ui,
+        "Multiple lists",
+        "(items can be dragged freely between all lists)",
+        |ui| {
+            egui::ScrollArea::vertical()
+                .id_source("scroll_multiple_lists")
+                .show(ui, |ui| {
+                    list.ui(ui);
+                });
+        },
+    );
+}
+
+fn demo_separate_nested_lists(ui: &mut egui::Ui, list: &mut SeparateNestedLists) {
+    dnd_demo(
+        ui,
+        "Separate nested lists",
+        "(items can be dragged within a list, including items in the root list!)",
+        |ui| {
+            egui::ScrollArea::vertical()
+                .id_source("scroll_separate_nested_lists")
+                .show(ui, |ui| {
+                    list.ui(ui);
+                });
+        },
+    );
+}
+
+fn demo_unified_nested_lists(ui: &mut egui::Ui, list: &mut NestedLists) {
+    dnd_demo(
+        ui,
+        "Unified nested lists",
+        "(items can be dragged between any list)",
+        |ui| {
+            egui::ScrollArea::vertical()
+                .id_source("scroll_nested_lists")
+                .show(ui, |ui| {
+                    list.ui(ui);
+                });
+        },
+    );
+}
+
+fn demo_collapsible_nested_lists(ui: &mut egui::Ui, list: &mut CollapsibleNestedLists) {
+    dnd_demo(
+        ui,
+        "Collapsible nested lists",
+        "(items can be collapsed and dragged between any list)",
+        |ui| {
+            egui::ScrollArea::vertical()
+                .id_source("scroll_collapsible_nested_lists")
+                .show(ui, |ui| {
+                    list.ui(ui);
+                });
+        },
+    );
 }
