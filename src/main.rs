@@ -1,5 +1,7 @@
 mod dnd;
+mod dnd_generic;
 
 fn main() -> eframe::Result {
-    dnd::run_demo()
+    // TODO: separate dnd and dnd_generic into crates with separate demo binaries
+    dnd_generic::run_demo()
 }
