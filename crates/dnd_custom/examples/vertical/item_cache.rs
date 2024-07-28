@@ -1,4 +1,5 @@
 use dnd_custom::generic_list;
+use dnd_custom::generic_list::DndState;
 use std::collections::HashMap;
 
 type ItemId = usize;
@@ -171,31 +172,18 @@ impl generic_list::DndItemCache for ItemCache {
         list_id: &Self::ListId,
         config: &generic_list::UiListConfig,
         ui: &mut egui::Ui,
-        dnd_item_iter: &mut hello_egui::dnd::item_iterator::ItemIterator,
-        dnd_idx: &mut usize,
-        ui_items: impl FnOnce(
-            &mut Self,
-            &mut egui::Ui,
-            &mut hello_egui::dnd::item_iterator::ItemIterator,
-            &mut usize,
-            &Vec<Self::ItemId>,
-        ),
-        ui_footer: impl FnOnce(
-            &mut egui::Ui,
-            &mut hello_egui::dnd::item_iterator::ItemIterator,
-            &mut usize,
-            Box<dyn FnOnce(&mut egui::Ui)>,
-        ),
+        dnd_state: &mut DndState,
+        ui_items: impl FnOnce(&mut Self, &mut egui::Ui, &mut DndState, &Vec<Self::ItemId>),
+        ui_footer: impl FnOnce(&mut egui::Ui, &mut DndState, Box<dyn FnOnce(&mut egui::Ui)>),
     ) {
         if let Some(list) = self.lists.get(list_id) {
             let clone = list.data.clone();
             ui.vertical(|ui| match config {
                 generic_list::UiListConfig::Root => {
-                    ui_items(self, ui, dnd_item_iter, dnd_idx, &clone);
+                    ui_items(self, ui, dnd_state, &clone);
                     ui_footer(
                         ui,
-                        dnd_item_iter,
-                        dnd_idx,
+                        dnd_state,
                         Box::new(|ui| {
                             ui.label("[placeholder root footer]");
                         }),
@@ -211,11 +199,10 @@ impl generic_list::DndItemCache for ItemCache {
                     }
 
                     ui.indent(egui::Id::new(list_id).with("indent"), |ui| {
-                        ui_items(self, ui, dnd_item_iter, dnd_idx, &clone);
+                        ui_items(self, ui, dnd_state, &clone);
                         ui_footer(
                             ui,
-                            dnd_item_iter,
-                            dnd_idx,
+                            dnd_state,
                             Box::new(|ui| {
                                 ui.separator();
                             }),

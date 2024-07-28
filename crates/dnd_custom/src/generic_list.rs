@@ -15,14 +15,22 @@ pub struct UiSubListConfig {
     pub draw_header: bool,
 }
 
+/// Configures how to draw the items in the list
 pub enum UiListConfig {
     Root,
     SubList(UiSubListConfig),
 }
 
+/// Configures how to draw the list header
 pub enum UiListHeaderConfig {
     Root,
     SubList,
+}
+
+/// State that must be passed into closures executed by `DndItemCache` functions
+pub struct DndState<'a, 'b> {
+    idx: &'a mut usize,
+    item_iter: &'a mut hello_egui::dnd::item_iterator::ItemIterator<'b>,
 }
 
 /// Implementing this trait for a nested collection of lists of items makes it possible to render
@@ -81,21 +89,9 @@ pub trait DndItemCache {
         list_id: &Self::ListId,
         config: &UiListConfig,
         ui: &mut egui::Ui,
-        dnd_item_iter: &mut hello_egui::dnd::item_iterator::ItemIterator,
-        dnd_idx: &mut usize,
-        ui_items: impl FnOnce(
-            &mut Self,
-            &mut egui::Ui,
-            &mut hello_egui::dnd::item_iterator::ItemIterator,
-            &mut usize,
-            &Vec<Self::ItemId>,
-        ),
-        ui_footer: impl FnOnce(
-            &mut egui::Ui,
-            &mut hello_egui::dnd::item_iterator::ItemIterator,
-            &mut usize,
-            Box<dyn FnOnce(&mut egui::Ui)>,
-        ),
+        dnd_state: &mut DndState,
+        ui_items: impl FnOnce(&mut Self, &mut egui::Ui, &mut DndState, &Vec<Self::ItemId>),
+        ui_footer: impl FnOnce(&mut egui::Ui, &mut DndState, Box<dyn FnOnce(&mut egui::Ui)>),
     );
 }
 
@@ -109,13 +105,17 @@ pub fn ui<ItemId: IdType, ListId: IdType>(
     let mut dnd_idx = 0usize;
     item_cache.ui_list_header(&root_list_id, &UiListHeaderConfig::Root, ui);
     hello_egui::dnd::dnd(ui, ui_id).show_custom(|ui, item_iter| {
+        let mut dnd_state = DndState {
+            idx: &mut dnd_idx,
+            item_iter,
+        };
+
         dnd_item_list.ui(
             item_cache,
             &root_list_id,
             &UiListConfig::Root,
             ui,
-            item_iter,
-            &mut dnd_idx,
+            &mut dnd_state,
         );
     });
 }
@@ -157,31 +157,23 @@ impl<ItemId: IdType, ListId: IdType> Default for DndItemList<ItemId, ListId> {
     }
 }
 
-/*
-pub struct DndState<'a> {
-    idx: &'a mut usize,
-    item_iter: &'a mut hello_egui::dnd::item_iterator::ItemIterator<'a>,
-}
- */
-
 impl<ItemId: IdType, ListId: IdType> DndItem<ItemId, ListId> {
     fn ui<T>(
         &mut self,
         item_cache: &mut T,
         item_id: &ItemId,
         ui: &mut egui::Ui,
-        dnd_item_iter: &mut hello_egui::dnd::item_iterator::ItemIterator,
-        dnd_idx: &mut usize,
+        dnd_state: &mut DndState,
     ) where
         T: DndItemCache<ItemId = ItemId, ListId = ListId>,
     {
         let mut force_collapsed = false;
         match item_cache.get_child_list_id(item_id) {
             Some(list_id) => {
-                dnd_item_iter.next(
+                dnd_state.item_iter.next(
                     ui,
                     egui::Id::new(item_id),
-                    *dnd_idx,
+                    *dnd_state.idx,
                     true,
                     |ui, dnd_item| {
                         dnd_item.ui(ui, |ui, handle, item_state| {
@@ -207,8 +199,7 @@ impl<ItemId: IdType, ListId: IdType> DndItem<ItemId, ListId> {
                         &list_id,
                         &UiListConfig::SubList(UiSubListConfig { draw_header: false }),
                         ui,
-                        dnd_item_iter,
-                        dnd_idx,
+                        dnd_state,
                     );
                 }
             }
@@ -226,30 +217,25 @@ impl<ItemId: IdType, ListId: IdType> DndItemList<ItemId, ListId> {
         list_id: &ListId,
         config: &UiListConfig,
         ui: &mut egui::Ui,
-        dnd_item_iter: &mut hello_egui::dnd::item_iterator::ItemIterator,
-        dnd_idx: &mut usize,
+        dnd_state: &mut DndState,
     ) {
-        let start = *dnd_idx;
+        let start = *dnd_state.idx;
         let mut end = start;
 
         item_cache.ui_list_contents(
             list_id,
             config,
             ui,
-            dnd_item_iter,
-            dnd_idx,
-            |item_cache, ui, dnd_item_iter, dnd_idx, items| {
+            dnd_state,
+            |item_cache, ui, dnd_state, items| {
                 for item in items {
-                    self.data.entry(*item).or_default().ui(
-                        item_cache,
-                        item,
-                        ui,
-                        dnd_item_iter,
-                        dnd_idx,
-                    );
+                    self.data
+                        .entry(*item)
+                        .or_default()
+                        .ui(item_cache, item, ui, dnd_state);
                 }
             },
-            |ui, dnd_item_iter, dnd_idx, footer: Box<dyn FnOnce(&mut egui::Ui)>| {
+            |ui, dnd_state, footer: Box<dyn FnOnce(&mut egui::Ui)>| {
                 match config {
                     UiListConfig::Root => {
                         // Don't include the footer in the root list to prevent items from being
@@ -257,10 +243,10 @@ impl<ItemId: IdType, ListId: IdType> DndItemList<ItemId, ListId> {
                         footer(ui);
                     }
                     UiListConfig::SubList(_) => {
-                        dnd_item_iter.next(
+                        dnd_state.item_iter.next(
                             ui,
                             egui::Id::new(list_id).with("footer"),
-                            *dnd_idx,
+                            *dnd_state.idx,
                             true,
                             |ui, dnd_item| {
                                 dnd_item.ui(ui, |ui, _handle, _item_state| {
@@ -268,8 +254,8 @@ impl<ItemId: IdType, ListId: IdType> DndItemList<ItemId, ListId> {
                                 })
                             },
                         );
-                        end = *dnd_idx;
-                        *dnd_idx += 1;
+                        end = *dnd_state.idx;
+                        *dnd_state.idx += 1;
                     }
                 }
             },
