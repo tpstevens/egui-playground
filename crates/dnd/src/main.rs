@@ -1,5 +1,4 @@
 mod collapsible_nested_lists;
-mod item;
 mod multiple_lists;
 mod nested_lists;
 mod separate_nested_lists;
@@ -7,15 +6,15 @@ mod two_lists;
 mod two_scroll_areas;
 mod util;
 
-use crate::dnd::collapsible_nested_lists::CollapsibleNestedLists;
-use crate::dnd::multiple_lists::MultipleLists;
-use crate::dnd::nested_lists::NestedLists;
-use crate::dnd::separate_nested_lists::SeparateNestedLists;
-use crate::dnd::two_lists::TwoLists;
-use crate::dnd::two_scroll_areas::TwoScrollAreas;
+use collapsible_nested_lists::CollapsibleNestedLists;
+use multiple_lists::MultipleLists;
+use nested_lists::NestedLists;
+use separate_nested_lists::SeparateNestedLists;
 use std::default::Default;
+use two_lists::TwoLists;
+use two_scroll_areas::TwoScrollAreas;
 
-pub fn run_demo() -> eframe::Result {
+pub fn main() -> eframe::Result {
     let mut two_lists = TwoLists::new(0, 40);
     let mut two_scroll_areas = TwoScrollAreas::new(10000, 50);
     let mut multiple_lists = MultipleLists::new(6, 20000, 10);

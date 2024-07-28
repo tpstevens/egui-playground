@@ -1,4 +1,4 @@
-use crate::dnd::item::Item;
+use crate::util::Item;
 
 /// Two lists separated by a horizontal line that have independent ScrollAreas.
 ///
@@ -78,7 +78,7 @@ impl TwoScrollAreas {
         });
 
         if let Some(update) = response.update {
-            crate::dnd::util::move_elements_2(
+            crate::util::move_elements_2(
                 &mut self.list_1,
                 &mut self.list_2,
                 update.from,

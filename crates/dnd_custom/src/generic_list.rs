@@ -8,6 +8,9 @@ use std::marker::PhantomData;
 
 pub trait IdType: Copy + Eq + Display + Hash {}
 
+// TODO: figure out how to handle implementations for arbitrary ID types
+impl IdType for usize {}
+
 pub struct UiSubListConfig {
     pub draw_header: bool,
 }

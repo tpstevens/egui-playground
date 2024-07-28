@@ -1,4 +1,4 @@
-use crate::dnd::item::Item;
+use crate::util::Item;
 
 /// A structure that contains multiple lists (separated with a horizontal line) whose items can be
 /// dragged freely between them.

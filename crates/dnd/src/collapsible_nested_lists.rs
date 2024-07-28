@@ -1,4 +1,4 @@
-use crate::dnd::item::Item;
+use crate::util::Item;
 
 /// A structure that allows arbitrary nested lists where any item in the list can be dragged to any
 /// other list (except to one of its child lists).

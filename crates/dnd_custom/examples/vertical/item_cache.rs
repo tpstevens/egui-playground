@@ -1,10 +1,8 @@
-use crate::dnd_generic::generic_list;
+use dnd_custom::generic_list;
 use std::collections::HashMap;
 
 type ItemId = usize;
 type ListId = usize;
-
-impl generic_list::IdType for usize {}
 
 struct Item {
     /// Must be unique among item IDs (but not among other types of IDs, like list IDs).

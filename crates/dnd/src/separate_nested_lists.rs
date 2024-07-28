@@ -1,4 +1,4 @@
-use crate::dnd::item::Item;
+use crate::util::Item;
 use std::hash::{Hash, Hasher};
 
 /// Allows drawing nested lists whose items can only be dragged internally (not across list boundaries).

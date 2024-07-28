@@ -1,4 +1,4 @@
-use crate::dnd::item::Item;
+use crate::util::Item;
 
 /// Two unified lists that are separated by a horizontal line.
 pub struct TwoLists {
@@ -68,7 +68,7 @@ impl TwoLists {
             });
 
         if let Some(update) = response.update {
-            crate::dnd::util::move_elements_2(
+            crate::util::move_elements_2(
                 &mut self.list_1,
                 &mut self.list_2,
                 update.from,
