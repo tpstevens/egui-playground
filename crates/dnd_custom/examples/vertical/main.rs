@@ -4,7 +4,6 @@ use dnd_custom::generic_list;
 
 pub fn main() -> eframe::Result {
     let mut vertical_items = item_cache::ItemCache::demo_new(60000, 3, 2);
-    let mut vertical_dnd = generic_list::DndItemList::<usize, usize>::default();
 
     eframe::run_simple_native(
         "egui_playground_dnd_custom_ex_vertical",
@@ -26,7 +25,6 @@ pub fn main() -> eframe::Result {
                             egui::Id::new("demo_vertical"),
                             &mut vertical_items,
                             &root_list_id,
-                            &mut vertical_dnd,
                         );
                     });
             });

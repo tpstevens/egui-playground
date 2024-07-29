@@ -1,15 +1,9 @@
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::hash::Hash;
-use std::marker::PhantomData;
 
 // =================================================================================================
 // Public types, traits, and functions
-
-pub trait IdType: Copy + Eq + Display + Hash {}
-
-// TODO: figure out how to handle implementations for arbitrary ID types
-impl IdType for usize {}
 
 pub struct UiSubListConfig {
     pub draw_header: bool,
@@ -55,8 +49,8 @@ pub struct DndState<'a, 'b> {
 /// It is similarly reasonable for the closure that draws the footer to do nothing, if desired.
 // TODO: summary here, details on each function
 pub trait DndItemCache {
-    type ItemId: IdType;
-    type ListId: IdType;
+    type ItemId: Copy + Eq + Display + Hash;
+    type ListId: Copy + Eq + Display + Hash;
 
     // Get the list that belongs to the given item.
     fn get_child_list_id(&self, item_id: &Self::ItemId) -> Option<Self::ListId>;
@@ -95,24 +89,29 @@ pub trait DndItemCache {
     );
 }
 
-pub fn ui<ItemId: IdType, ListId: IdType>(
+pub fn ui<ItemId, ListId>(
     ui: &mut egui::Ui,
     ui_id: egui::Id,
     item_cache: &mut impl DndItemCache<ItemId = ItemId, ListId = ListId>,
     root_list_id: &ListId,
-    dnd_item_list: &mut DndItemList<ItemId, ListId>,
-) {
+) where
+    ItemId: Copy + Eq + Display + Hash,
+    ListId: Copy + Eq + Display + Hash,
+{
     let mut dnd_idx = 0usize;
-    item_cache.ui_list_header(&root_list_id, &UiListHeaderConfig::Root, ui);
+    let mut list_bounds = HashMap::<ListId, DndIdxBounds>::new();
+
+    item_cache.ui_list_header(root_list_id, &UiListHeaderConfig::Root, ui);
     hello_egui::dnd::dnd(ui, ui_id).show_custom(|ui, item_iter| {
         let mut dnd_state = DndState {
             idx: &mut dnd_idx,
             item_iter,
         };
 
-        dnd_item_list.ui(
+        draw_list(
+            &mut list_bounds,
             item_cache,
-            &root_list_id,
+            root_list_id,
             &UiListConfig::Root,
             ui,
             &mut dnd_state,
@@ -120,147 +119,115 @@ pub fn ui<ItemId: IdType, ListId: IdType>(
     });
 }
 
-// TODO: make struct private and store in/retrieve from egui memory
-pub struct DndItemList<ItemId: IdType, ListId: IdType> {
-    data: HashMap<ItemId, DndItem<ItemId, ListId>>,
-    dnd_idx_bounds: DndIdxBounds,
-}
-
 // =================================================================================================
-// Private types and traits
+// Private types, traits, and functions
 
 struct DndIdxBounds {
     start: usize,
     end: usize,
 }
 
-struct DndItem<ItemId: IdType, ListId: IdType> {
-    _phantom_data: PhantomData<ListId>,
-    children: DndItemList<ItemId, ListId>,
-}
-
-impl<ItemId: IdType, ListId: IdType> Default for DndItem<ItemId, ListId> {
-    fn default() -> Self {
-        Self {
-            _phantom_data: PhantomData,
-            children: DndItemList::<ItemId, ListId>::default(),
-        }
+impl DndIdxBounds {
+    const fn contains(&self, dnd_idx: usize) -> bool {
+        dnd_idx >= self.start && dnd_idx <= self.end
     }
 }
 
-impl<ItemId: IdType, ListId: IdType> Default for DndItemList<ItemId, ListId> {
-    fn default() -> Self {
-        Self {
-            data: HashMap::<ItemId, DndItem<ItemId, ListId>>::new(),
-            dnd_idx_bounds: DndIdxBounds { start: 0, end: 0 },
-        }
-    }
-}
+fn draw_list<ItemId, ListId, T: DndItemCache<ItemId = ItemId, ListId = ListId>>(
+    list_bounds: &mut HashMap<ListId, DndIdxBounds>,
+    item_cache: &mut T,
+    list_id: &ListId,
+    config: &UiListConfig,
+    ui: &mut egui::Ui,
+    dnd_state: &mut DndState,
+) where
+    ItemId: Copy + Eq + Display + Hash,
+    ListId: Copy + Eq + Display + Hash,
+{
+    let start = *dnd_state.idx;
+    let mut end = start;
 
-impl<ItemId: IdType, ListId: IdType> DndItem<ItemId, ListId> {
-    fn ui<T>(
-        &mut self,
-        item_cache: &mut T,
-        item_id: &ItemId,
-        ui: &mut egui::Ui,
-        dnd_state: &mut DndState,
-    ) where
-        T: DndItemCache<ItemId = ItemId, ListId = ListId>,
-    {
-        let mut force_collapsed = false;
-        match item_cache.get_child_list_id(item_id) {
-            Some(list_id) => {
-                dnd_state.item_iter.next(
-                    ui,
-                    egui::Id::new(item_id),
-                    *dnd_state.idx,
-                    true,
-                    |ui, dnd_item| {
-                        dnd_item.ui(ui, |ui, handle, item_state| {
-                            force_collapsed = item_state.dragged;
+    let ui_items =
+        |item_cache: &mut T, ui: &mut egui::Ui, dnd_state: &mut DndState, items: &Vec<ItemId>| {
+            for item in items {
+                draw_item(list_bounds, item_cache, item, ui, dnd_state);
+            }
+        };
 
-                            force_collapsed |=
-                                item_cache.ui_item(item_id, ui, handle, force_collapsed);
-
-                            if !force_collapsed {
-                                item_cache.ui_list_header(
-                                    &list_id,
-                                    &UiListHeaderConfig::SubList,
-                                    ui,
-                                );
-                            }
-                        })
-                    },
-                );
-
-                if !force_collapsed {
-                    self.children.ui(
-                        item_cache,
-                        &list_id,
-                        &UiListConfig::SubList(UiSubListConfig { draw_header: false }),
+    let ui_footer =
+        |ui: &mut egui::Ui, dnd_state: &mut DndState, footer: Box<dyn FnOnce(&mut egui::Ui)>| {
+            match config {
+                UiListConfig::Root => {
+                    // Don't include the footer in the root list to prevent items from being
+                    // dragged past it
+                    footer(ui);
+                }
+                UiListConfig::SubList(_) => {
+                    dnd_state.item_iter.next(
                         ui,
-                        dnd_state,
+                        egui::Id::new(list_id).with("footer"),
+                        *dnd_state.idx,
+                        true,
+                        |ui, dnd_item| {
+                            dnd_item.ui(ui, |ui, _handle, _item_state| {
+                                footer(ui);
+                            })
+                        },
                     );
+                    end = *dnd_state.idx;
+                    *dnd_state.idx += 1;
                 }
             }
-            None => {
-                ui.label(format!("Could not find list id for item {item_id}"));
-            }
-        }
-    }
+        };
+
+    item_cache.ui_list_contents(list_id, config, ui, dnd_state, ui_items, ui_footer);
+    list_bounds.insert(*list_id, DndIdxBounds { start, end });
 }
 
-impl<ItemId: IdType, ListId: IdType> DndItemList<ItemId, ListId> {
-    fn ui<T: DndItemCache<ItemId = ItemId, ListId = ListId>>(
-        &mut self,
-        item_cache: &mut T,
-        list_id: &ListId,
-        config: &UiListConfig,
-        ui: &mut egui::Ui,
-        dnd_state: &mut DndState,
-    ) {
-        let start = *dnd_state.idx;
-        let mut end = start;
+fn draw_item<ItemId, ListId, T: DndItemCache<ItemId = ItemId, ListId = ListId>>(
+    list_bounds: &mut HashMap<ListId, DndIdxBounds>,
+    item_cache: &mut T,
+    item_id: &ItemId,
+    ui: &mut egui::Ui,
+    dnd_state: &mut DndState,
+) where
+    ItemId: Copy + Eq + Display + Hash,
+    ListId: Copy + Eq + Display + Hash,
+{
+    let mut force_collapsed = false;
+    match item_cache.get_child_list_id(item_id) {
+        Some(list_id) => {
+            dnd_state.item_iter.next(
+                ui,
+                egui::Id::new(item_id),
+                *dnd_state.idx,
+                true,
+                |ui, dnd_item| {
+                    dnd_item.ui(ui, |ui, handle, item_state| {
+                        force_collapsed = item_state.dragged;
 
-        item_cache.ui_list_contents(
-            list_id,
-            config,
-            ui,
-            dnd_state,
-            |item_cache, ui, dnd_state, items| {
-                for item in items {
-                    self.data
-                        .entry(*item)
-                        .or_default()
-                        .ui(item_cache, item, ui, dnd_state);
-                }
-            },
-            |ui, dnd_state, footer: Box<dyn FnOnce(&mut egui::Ui)>| {
-                match config {
-                    UiListConfig::Root => {
-                        // Don't include the footer in the root list to prevent items from being
-                        // dragged past it
-                        footer(ui);
-                    }
-                    UiListConfig::SubList(_) => {
-                        dnd_state.item_iter.next(
-                            ui,
-                            egui::Id::new(list_id).with("footer"),
-                            *dnd_state.idx,
-                            true,
-                            |ui, dnd_item| {
-                                dnd_item.ui(ui, |ui, _handle, _item_state| {
-                                    footer(ui);
-                                })
-                            },
-                        );
-                        end = *dnd_state.idx;
-                        *dnd_state.idx += 1;
-                    }
-                }
-            },
-        );
+                        force_collapsed |= item_cache.ui_item(item_id, ui, handle, force_collapsed);
 
-        self.dnd_idx_bounds = DndIdxBounds { start, end };
+                        if !force_collapsed {
+                            item_cache.ui_list_header(&list_id, &UiListHeaderConfig::SubList, ui);
+                        }
+                    })
+                },
+            );
+
+            if !force_collapsed {
+                draw_list(
+                    list_bounds,
+                    item_cache,
+                    &list_id,
+                    &UiListConfig::SubList(UiSubListConfig { draw_header: false }),
+                    ui,
+                    dnd_state,
+                );
+            }
+        }
+        None => {
+            ui.label(format!("Could not find list id for item {item_id}"));
+        }
     }
 }
