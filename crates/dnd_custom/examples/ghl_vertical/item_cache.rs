@@ -1,5 +1,4 @@
-use dnd_custom::generic_list;
-use dnd_custom::generic_list::DndState;
+use dnd_custom::ghl;
 use std::collections::HashMap;
 
 type ItemId = usize;
@@ -35,7 +34,7 @@ struct ItemList {
     data: Vec<ItemId>,
 }
 
-/// Stores items and lists and implements the drawing interface required by `nested_list::DndItemCache`.
+/// Stores items and lists and implements the drawing interface required by `ghl::Ghl`.
 pub struct ItemCache {
     items: HashMap<ItemId, Item>,
     lists: HashMap<ListId, ItemList>,
@@ -67,26 +66,26 @@ impl ItemCache {
         }
     }
 
-    pub fn handle_update(&mut self, update: &generic_list::DragUpdate<ListId>) -> bool {
+    pub fn handle_update(&mut self, update: &ghl::DragUpdate<ListId>) -> bool {
         if let Some(removed_item) = self
             .lists
             .get_mut(&update.from.list_id)
             .map(|list| list.data.remove(update.from.idx))
         {
             match &update.to {
-                generic_list::DragDestination::Insert(to) => {
+                ghl::DragDestination::Insert(to) => {
                     if let Some(list) = self.lists.get_mut(&to.list_id) {
                         list.data.insert(to.idx, removed_item);
                         return true;
                     }
                 }
-                generic_list::DragDestination::Push(to) => {
-                    if let Some(list) = self.lists.get_mut(&to) {
+                ghl::DragDestination::Push(to) => {
+                    if let Some(list) = self.lists.get_mut(to) {
                         list.data.push(removed_item);
                         return true;
                     }
                 }
-                generic_list::DragDestination::Within(to) => {
+                ghl::DragDestination::Within(to) => {
                     if let Some(list) = self.lists.get_mut(&update.from.list_id) {
                         // TODO: rotate list for efficiency instead of removing and inserting
                         list.data.insert(*to, removed_item);
@@ -149,7 +148,7 @@ impl ItemCache {
     }
 }
 
-impl generic_list::DndItemCache for ItemCache {
+impl ghl::Ghl for ItemCache {
     type ItemId = ItemId;
     type ListId = ListId;
 
@@ -217,10 +216,10 @@ impl generic_list::DndItemCache for ItemCache {
     fn ui_list_header(
         &mut self,
         _list_id: &Self::ListId,
-        config: &generic_list::UiListHeaderConfig,
+        config: &ghl::UiListHeaderConfig,
         ui: &mut egui::Ui,
     ) {
-        if matches!(config, generic_list::UiListHeaderConfig::Root) {
+        if matches!(config, ghl::UiListHeaderConfig::Root) {
             ui.label("[placeholder root header]");
         }
     }
@@ -228,37 +227,37 @@ impl generic_list::DndItemCache for ItemCache {
     fn ui_list_contents(
         &mut self,
         list_id: &Self::ListId,
-        config: &generic_list::UiListConfig,
+        config: &ghl::UiListConfig,
         ui: &mut egui::Ui,
-        dnd_state: &mut DndState<Self::ItemId, Self::ListId>,
-        ui_items: impl FnOnce(&mut Self, &mut egui::Ui, &mut DndState<Self::ItemId, Self::ListId>),
+        ui_state: &mut ghl::UiState<Self::ItemId, Self::ListId>,
+        ui_items: impl FnOnce(&mut Self, &mut egui::Ui, &mut ghl::UiState<Self::ItemId, Self::ListId>),
         ui_footer: impl FnOnce(
             &mut egui::Ui,
-            &mut DndState<Self::ItemId, Self::ListId>,
+            &mut ghl::UiState<Self::ItemId, Self::ListId>,
             Box<dyn FnOnce(&mut egui::Ui)>,
         ),
     ) {
         ui.vertical(|ui| match config {
-            generic_list::UiListConfig::Root => {
-                ui_items(self, ui, dnd_state);
+            ghl::UiListConfig::Root => {
+                ui_items(self, ui, ui_state);
                 ui_footer(
                     ui,
-                    dnd_state,
+                    ui_state,
                     Box::new(|ui| {
                         ui.label("[placeholder root footer]");
                     }),
                 );
             }
-            generic_list::UiListConfig::SubList(cfg) => {
+            ghl::UiListConfig::SubList(cfg) => {
                 if cfg.draw_header {
-                    self.ui_list_header(list_id, &generic_list::UiListHeaderConfig::SubList, ui);
+                    self.ui_list_header(list_id, &ghl::UiListHeaderConfig::SubList, ui);
                 }
 
                 ui.indent(egui::Id::new(list_id).with("indent"), |ui| {
-                    ui_items(self, ui, dnd_state);
+                    ui_items(self, ui, ui_state);
                     ui_footer(
                         ui,
-                        dnd_state,
+                        ui_state,
                         Box::new(|ui| {
                             ui.separator();
                         }),

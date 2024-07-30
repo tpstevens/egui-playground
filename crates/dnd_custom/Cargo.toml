@@ -21,8 +21,8 @@ name = "dnd_custom"
 path = "src/lib.rs"
 
 [[example]]
-name = "ex_vertical"
-path = "examples/vertical/main.rs"
+name = "ex_ghl_vertical"
+path = "examples/ghl_vertical/main.rs"
 
 [lints]
 workspace = true
