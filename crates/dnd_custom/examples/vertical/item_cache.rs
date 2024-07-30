@@ -44,13 +44,21 @@ pub struct ItemCache {
 
 impl ItemCache {
     /// Generates a demo set of nested items.
-    pub fn demo_new(next_id: usize, depth: usize, list_len: usize) -> Self {
+    pub fn demo_new(depth: usize, list_len: usize) -> Self {
         let mut items = HashMap::<ItemId, Item>::new();
         let mut lists = HashMap::<ListId, ItemList>::new();
 
-        let mut next_id = next_id;
+        let mut next_list_id = 0usize;
+        let mut next_item_id = 0usize;
 
-        let root_list_id = Self::new_list(&mut next_id, &mut items, &mut lists, depth, list_len);
+        let root_list_id = Self::new_list(
+            &mut next_list_id,
+            &mut next_item_id,
+            &mut items,
+            &mut lists,
+            depth,
+            list_len,
+        );
 
         Self {
             items,
@@ -59,26 +67,66 @@ impl ItemCache {
         }
     }
 
+    pub fn handle_update(&mut self, update: &generic_list::DragUpdate<ListId>) -> bool {
+        if let Some(removed_item) = self
+            .lists
+            .get_mut(&update.from.list_id)
+            .map(|list| list.data.remove(update.from.idx))
+        {
+            match &update.to {
+                generic_list::DragDestination::Insert(to) => {
+                    if let Some(list) = self.lists.get_mut(&to.list_id) {
+                        list.data.insert(to.idx, removed_item);
+                        return true;
+                    }
+                }
+                generic_list::DragDestination::Push(to) => {
+                    if let Some(list) = self.lists.get_mut(&to) {
+                        list.data.push(removed_item);
+                        return true;
+                    }
+                }
+                generic_list::DragDestination::Within(to) => {
+                    if let Some(list) = self.lists.get_mut(&update.from.list_id) {
+                        // TODO: rotate list for efficiency instead of removing and inserting
+                        list.data.insert(*to, removed_item);
+                        return true;
+                    }
+                }
+            }
+        }
+
+        false
+    }
+
     fn new_list(
-        next_id: &mut usize,
+        next_list_id: &mut usize,
+        next_item_id: &mut usize,
         items: &mut HashMap<ItemId, Item>,
         lists: &mut HashMap<ListId, ItemList>,
         depth: usize,
         list_len: usize,
     ) -> ListId {
-        let list_id = *next_id;
-        *next_id += 1;
+        let list_id = *next_list_id;
+        *next_list_id += 1;
 
         let mut data = Vec::<ItemId>::new();
         if depth > 0 {
             for _ in 0..list_len {
-                let item_id: ItemId = *next_id;
-                *next_id += 1;
+                let item_id: ItemId = *next_item_id;
+                *next_item_id += 1;
 
                 let item = Item::new(
                     item_id,
                     "placeholder title",
-                    Self::new_list(next_id, items, lists, depth - 1, list_len),
+                    Self::new_list(
+                        next_list_id,
+                        next_item_id,
+                        items,
+                        lists,
+                        depth - 1,
+                        list_len,
+                    ),
                 );
                 items.insert(item_id, item);
                 data.push(item_id);
@@ -109,6 +157,12 @@ impl generic_list::DndItemCache for ItemCache {
         self.items.get(item_id).map(|item| item.children)
     }
 
+    fn get_list_contents(&self, list_id: &Self::ListId) -> Option<&Vec<Self::ItemId>> {
+        self.lists
+            .get(list_id)
+            .map(|item_list| item_list.data.as_ref())
+    }
+
     fn ui_item(
         &mut self,
         item_id: &Self::ItemId,
@@ -117,9 +171,8 @@ impl generic_list::DndItemCache for ItemCache {
         force_collapsed: bool,
     ) -> bool {
         if let Some(item) = self.items.get_mut(item_id) {
-            let collapsed_any = item.ui_collapsed || force_collapsed;
+            let mut collapsed_any = item.ui_collapsed || force_collapsed;
 
-            // TODO: allocate elements to ensure that handle and sorted by don't overlap
             ui.horizontal(|ui| {
                 handle.ui(ui, |ui| {
                     if collapsed_any {
@@ -127,7 +180,12 @@ impl generic_list::DndItemCache for ItemCache {
                     } else {
                         ui.toggle_value(&mut item.ui_collapsed, "v");
                     }
-                    ui.label(format!("({}) {}", item.id, item.title));
+                    collapsed_any |= item.ui_collapsed;
+
+                    ui.label(format!(
+                        "(item = {}) {} (list = {})",
+                        item.id, item.title, item.children
+                    ));
                 });
 
                 if !collapsed_any {
@@ -136,7 +194,7 @@ impl generic_list::DndItemCache for ItemCache {
                         match self.lists.get_mut(&list_id) {
                             Some(list) => {
                                 ui.horizontal(|ui| {
-                                    // TODO: constrain the length of editor
+                                    // TODO: constrain the length of TextEdit so it doesn't overlap the handle
                                     ui.text_edit_singleline(&mut list.sorted_by);
                                     ui.label("Sorted by: ");
                                 });
@@ -172,46 +230,41 @@ impl generic_list::DndItemCache for ItemCache {
         list_id: &Self::ListId,
         config: &generic_list::UiListConfig,
         ui: &mut egui::Ui,
-        dnd_state: &mut DndState,
-        ui_items: impl FnOnce(&mut Self, &mut egui::Ui, &mut DndState, &Vec<Self::ItemId>),
-        ui_footer: impl FnOnce(&mut egui::Ui, &mut DndState, Box<dyn FnOnce(&mut egui::Ui)>),
+        dnd_state: &mut DndState<Self::ItemId, Self::ListId>,
+        ui_items: impl FnOnce(&mut Self, &mut egui::Ui, &mut DndState<Self::ItemId, Self::ListId>),
+        ui_footer: impl FnOnce(
+            &mut egui::Ui,
+            &mut DndState<Self::ItemId, Self::ListId>,
+            Box<dyn FnOnce(&mut egui::Ui)>,
+        ),
     ) {
-        if let Some(list) = self.lists.get(list_id) {
-            let clone = list.data.clone();
-            ui.vertical(|ui| match config {
-                generic_list::UiListConfig::Root => {
-                    ui_items(self, ui, dnd_state, &clone);
+        ui.vertical(|ui| match config {
+            generic_list::UiListConfig::Root => {
+                ui_items(self, ui, dnd_state);
+                ui_footer(
+                    ui,
+                    dnd_state,
+                    Box::new(|ui| {
+                        ui.label("[placeholder root footer]");
+                    }),
+                );
+            }
+            generic_list::UiListConfig::SubList(cfg) => {
+                if cfg.draw_header {
+                    self.ui_list_header(list_id, &generic_list::UiListHeaderConfig::SubList, ui);
+                }
+
+                ui.indent(egui::Id::new(list_id).with("indent"), |ui| {
+                    ui_items(self, ui, dnd_state);
                     ui_footer(
                         ui,
                         dnd_state,
                         Box::new(|ui| {
-                            ui.label("[placeholder root footer]");
+                            ui.separator();
                         }),
                     );
-                }
-                generic_list::UiListConfig::SubList(cfg) => {
-                    if cfg.draw_header {
-                        self.ui_list_header(
-                            list_id,
-                            &generic_list::UiListHeaderConfig::SubList,
-                            ui,
-                        );
-                    }
-
-                    ui.indent(egui::Id::new(list_id).with("indent"), |ui| {
-                        ui_items(self, ui, dnd_state, &clone);
-                        ui_footer(
-                            ui,
-                            dnd_state,
-                            Box::new(|ui| {
-                                ui.separator();
-                            }),
-                        );
-                    });
-                }
-            });
-        } else {
-            ui.label(format!("List {list_id} not found!"));
-        }
+                });
+            }
+        });
     }
 }
