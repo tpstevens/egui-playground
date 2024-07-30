@@ -24,7 +24,7 @@ pub fn main() -> eframe::Result {
                             ui,
                             egui::Id::new("demo_vertical"),
                             &mut vertical_items,
-                            &root_list_id,
+                            root_list_id,
                         ) {
                             vertical_items.handle_update(&update);
                         }

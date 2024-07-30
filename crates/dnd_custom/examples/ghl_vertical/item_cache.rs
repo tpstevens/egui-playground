@@ -152,24 +152,27 @@ impl ghl::Ghl for ItemCache {
     type ItemId = ItemId;
     type ListId = ListId;
 
-    fn get_child_list_id(&self, item_id: &Self::ItemId) -> Option<Self::ListId> {
-        self.items.get(item_id).map(|item| item.children)
+    fn get_child_list_id(&self, item_id: Self::ItemId) -> Option<Self::ListId> {
+        self.items.get(&item_id).map(|item| item.children)
     }
 
-    fn get_list_contents(&self, list_id: &Self::ListId) -> Option<&Vec<Self::ItemId>> {
+    fn get_list_contents(
+        &self,
+        list_id: Self::ListId,
+    ) -> Option<impl Iterator<Item = Self::ItemId>> {
         self.lists
-            .get(list_id)
-            .map(|item_list| item_list.data.as_ref())
+            .get(&list_id)
+            .map(|item_list| item_list.data.iter().copied())
     }
 
     fn ui_item(
         &mut self,
-        item_id: &Self::ItemId,
+        item_id: Self::ItemId,
         ui: &mut egui::Ui,
         handle: hello_egui::dnd::Handle,
         force_collapsed: bool,
     ) -> bool {
-        if let Some(item) = self.items.get_mut(item_id) {
+        if let Some(item) = self.items.get_mut(&item_id) {
             let mut collapsed_any = item.ui_collapsed || force_collapsed;
 
             ui.horizontal(|ui| {
@@ -217,7 +220,7 @@ impl ghl::Ghl for ItemCache {
 
     fn ui_list_header(
         &mut self,
-        _list_id: &Self::ListId,
+        _list_id: Self::ListId,
         config: &ghl::UiListHeaderConfig,
         ui: &mut egui::Ui,
     ) {
@@ -228,7 +231,7 @@ impl ghl::Ghl for ItemCache {
 
     fn ui_list_contents(
         &mut self,
-        list_id: &Self::ListId,
+        list_id: Self::ListId,
         config: &ghl::UiListConfig,
         ui: &mut egui::Ui,
         ui_state: &mut ghl::UiState<Self::ItemId, Self::ListId>,

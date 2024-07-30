@@ -90,16 +90,18 @@ pub trait Ghl {
     type ListId: Copy + Debug + Display + Eq + Hash;
 
     /// Get the list that belongs to the given item.
-    fn get_child_list_id(&self, item_id: &Self::ItemId) -> Option<Self::ListId>;
+    fn get_child_list_id(&self, item_id: Self::ItemId) -> Option<Self::ListId>;
 
     /// Get all the items that belong to the given list.
-    // TODO: consider iterator to avoid clone, or at least a slice to avoid Vec
-    fn get_list_contents(&self, item_id: &Self::ListId) -> Option<&Vec<Self::ItemId>>;
+    fn get_list_contents(
+        &self,
+        item_id: Self::ListId,
+    ) -> Option<impl Iterator<Item = Self::ItemId>>;
 
     /// Draw the item.
     fn ui_item(
         &mut self,
-        item_id: &Self::ItemId,
+        item_id: Self::ItemId,
         ui: &mut egui::Ui,
         handle: hello_egui::dnd::Handle,
         force_collapsed: bool,
@@ -108,7 +110,7 @@ pub trait Ghl {
     /// Draw the header.
     fn ui_list_header(
         &mut self,
-        list_id: &Self::ListId,
+        list_id: Self::ListId,
         config: &UiListHeaderConfig,
         ui: &mut egui::Ui,
     );
@@ -121,7 +123,7 @@ pub trait Ghl {
     ///   with a closure to draw the footer.
     fn ui_list_contents(
         &mut self,
-        list_id: &Self::ListId,
+        list_id: Self::ListId,
         config: &UiListConfig,
         ui: &mut egui::Ui,
         ui_state: &mut UiState<Self::ItemId, Self::ListId>,
@@ -138,7 +140,7 @@ pub fn ui<ItemId, ListId>(
     ui: &mut egui::Ui,
     ui_id: egui::Id,
     ghl: &mut impl Ghl<ItemId = ItemId, ListId = ListId>,
-    root_list_id: &ListId,
+    root_list_id: ListId,
 ) -> Option<DragUpdate<ListId>>
 where
     ItemId: Copy + Debug + Display + Eq + Hash,
@@ -167,7 +169,7 @@ where
             {
                 if let Some(to) = find_end(
                     root_list_id,
-                    &from.list_id,
+                    from.list_id,
                     update.to,
                     &list_bounds,
                     &item_states,
@@ -206,7 +208,7 @@ struct ItemState {
 
 fn draw_list<ItemId, ListId, T: Ghl<ItemId = ItemId, ListId = ListId>>(
     ghl: &mut T,
-    list_id: &ListId,
+    list_id: ListId,
     config: &UiListConfig,
     ui: &mut egui::Ui,
     ui_state: &mut UiState<ItemId, ListId>,
@@ -215,9 +217,13 @@ fn draw_list<ItemId, ListId, T: Ghl<ItemId = ItemId, ListId = ListId>>(
     ListId: Copy + Debug + Display + Eq + Hash,
 {
     let ui_items = |ghl: &mut T, ui: &mut egui::Ui, ui_state: &mut UiState<ItemId, ListId>| {
-        if let Some(items) = ghl.get_list_contents(list_id) {
-            for item in items.clone() {
-                draw_item(ghl, &item, ui, ui_state);
+        // Not using if `let Some(x) = ghl.get_list_contents()` here because need the returned
+        // Option to go out of scope before calling draw_item()
+        let items = ghl.get_list_contents(list_id);
+        if items.is_some() {
+            let items_clone = items.into_iter().flatten().collect::<Vec<ItemId>>();
+            for item in items_clone {
+                draw_item(ghl, item, ui, ui_state);
             }
         } else {
             ui.label(
@@ -254,7 +260,7 @@ fn draw_list<ItemId, ListId, T: Ghl<ItemId = ItemId, ListId = ListId>>(
     let start = *ui_state.dnd_idx;
     ghl.ui_list_contents(list_id, config, ui, ui_state, ui_items, ui_footer);
     ui_state.list_bounds.insert(
-        *list_id,
+        list_id,
         DndIdxBounds {
             start,
             end: *ui_state.dnd_idx,
@@ -265,7 +271,7 @@ fn draw_list<ItemId, ListId, T: Ghl<ItemId = ItemId, ListId = ListId>>(
 
 fn draw_item<ItemId, ListId, T: Ghl<ItemId = ItemId, ListId = ListId>>(
     ghl: &mut T,
-    item_id: &ItemId,
+    item_id: ItemId,
     ui: &mut egui::Ui,
     ui_state: &mut UiState<ItemId, ListId>,
 ) where
@@ -287,14 +293,14 @@ fn draw_item<ItemId, ListId, T: Ghl<ItemId = ItemId, ListId = ListId>>(
                     item_dragging = item_state.dragged;
                     item_collapsed = ghl.ui_item(item_id, ui, handle, item_dragging);
                     if !item_collapsed && !item_dragging {
-                        ghl.ui_list_header(&list_id, &UiListHeaderConfig::SubList, ui);
+                        ghl.ui_list_header(list_id, &UiListHeaderConfig::SubList, ui);
                     }
                 })
             },
         );
 
         ui_state.item_states.insert(
-            *item_id,
+            item_id,
             ItemState {
                 collapsed: item_collapsed,
                 dnd_idx: item_idx,
@@ -306,7 +312,7 @@ fn draw_item<ItemId, ListId, T: Ghl<ItemId = ItemId, ListId = ListId>>(
         if !item_collapsed && !item_dragging {
             draw_list(
                 ghl,
-                &list_id,
+                list_id,
                 &UiListConfig::SubList(UiSubListConfig { draw_header: false }),
                 ui,
                 ui_state,
@@ -321,7 +327,7 @@ fn draw_item<ItemId, ListId, T: Ghl<ItemId = ItemId, ListId = ListId>>(
 }
 
 fn find_start<ItemId, ListId>(
-    root_list_id: &ListId,
+    root_list_id: ListId,
     dnd_idx_start: usize,
     list_bounds: &HashMap<ListId, DndIdxBounds>,
     item_states: &HashMap<ItemId, ItemState>,
@@ -331,16 +337,19 @@ where
     ItemId: Copy + Debug + Display + Eq + Hash,
     ListId: Copy + Debug + Display + Eq + Hash,
 {
-    let mut curr_list_id = *root_list_id;
+    let mut curr_list_id = root_list_id;
     'list_search: while let Some(bounds) = list_bounds.get(&curr_list_id) {
         if !bounds.contains(dnd_idx_start) {
             break 'list_search;
         }
 
-        if let Some(children) = ghl.get_list_contents(&curr_list_id) {
-            for (idx, item_id) in children.iter().enumerate() {
+        // Not using if `let Some(x) = ghl.get_list_contents()` here because need the returned
+        // Option to go out of scope before calling draw_item()
+        let children = ghl.get_list_contents(curr_list_id);
+        if children.is_some() {
+            for (idx, item_id) in children.into_iter().flatten().enumerate() {
                 if let (Some(item_state), Some(child_list_id)) =
-                    (item_states.get(item_id), ghl.get_child_list_id(item_id))
+                    (item_states.get(&item_id), ghl.get_child_list_id(item_id))
                 {
                     if item_state.dnd_idx == dnd_idx_start {
                         return Some(DragLocation {
@@ -362,16 +371,14 @@ where
                 }
             }
         }
-
-        break 'list_search;
     }
 
     None
 }
 
 fn find_end<ItemId, ListId>(
-    root_list_id: &ListId,
-    drag_start_list_id: &ListId,
+    root_list_id: ListId,
+    drag_start_list_id: ListId,
     dnd_idx_end: usize,
     list_bounds: &HashMap<ListId, DndIdxBounds>,
     item_states: &HashMap<ItemId, ItemState>,
@@ -381,19 +388,22 @@ where
     ItemId: Copy + Debug + Display + Eq + Hash,
     ListId: Copy + Debug + Display + Eq + Hash,
 {
-    let mut curr_list_id = *root_list_id;
+    let mut curr_list_id = root_list_id;
     'list_search: while let Some(bounds) = list_bounds.get(&curr_list_id) {
-        if let Some(children) = ghl.get_list_contents(&curr_list_id) {
+        // Not using if `let Some(x) = ghl.get_list_contents()` here because need the returned
+        // Option to go out of scope before calling draw_item()
+        let children = ghl.get_list_contents(curr_list_id);
+        if children.is_some() {
             if bounds.end == dnd_idx_end {
                 return Some(DragDestination::Push(curr_list_id));
             }
 
-            for (idx, item_id) in children.iter().enumerate() {
+            for (idx, item_id) in children.into_iter().flatten().enumerate() {
                 if let (Some(item_state), Some(child_list_id)) =
-                    (item_states.get(item_id), ghl.get_child_list_id(item_id))
+                    (item_states.get(&item_id), ghl.get_child_list_id(item_id))
                 {
                     if item_state.dnd_idx == dnd_idx_end {
-                        if drag_start_list_id == &curr_list_id {
+                        if drag_start_list_id == curr_list_id {
                             return Some(DragDestination::Within(idx));
                         }
 
