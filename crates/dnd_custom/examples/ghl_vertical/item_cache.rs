@@ -192,11 +192,13 @@ impl ghl::Ghl for ItemCache {
                         let list_id = item.children;
                         match self.lists.get_mut(&list_id) {
                             Some(list) => {
-                                ui.horizontal(|ui| {
-                                    // TODO: constrain the length of TextEdit so it doesn't overlap the handle
-                                    ui.text_edit_singleline(&mut list.sorted_by);
-                                    ui.label("Sorted by: ");
-                                });
+                                ui.add_sized(
+                                    egui::Vec2::new(200f32, ui.available_size().y),
+                                    |ui: &mut egui::Ui| {
+                                        ui.text_edit_singleline(&mut list.sorted_by)
+                                    },
+                                );
+                                ui.label("Sorted by: ");
                             }
                             None => {
                                 ui.label(format!("List {list_id} not found!"));
