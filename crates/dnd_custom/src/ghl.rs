@@ -98,14 +98,16 @@ pub trait Ghl {
         item_id: Self::ListId,
     ) -> Option<impl Iterator<Item = Self::ItemId>>;
 
-    /// Draw the item.
+    /// Draw the item. Returns a tuple: `(whether the item was collapsed, whether the item was deleted)`.
     fn ui_item(
         &mut self,
         item_id: Self::ItemId,
+        parent_list_id: Self::ListId,
+        idx_in_parent_list: usize,
         ui: &mut egui::Ui,
         handle: hello_egui::dnd::Handle,
         force_collapsed: bool,
-    ) -> bool;
+    ) -> (bool, bool);
 
     /// Draw the header.
     fn ui_list_header(
@@ -222,8 +224,8 @@ fn draw_list<ItemId, ListId, T: Ghl<ItemId = ItemId, ListId = ListId>>(
         let items = ghl.get_list_contents(list_id);
         if items.is_some() {
             let items_clone = items.into_iter().flatten().collect::<Vec<ItemId>>();
-            for item in items_clone {
-                draw_item(ghl, item, ui, ui_state);
+            for (idx, item) in items_clone.iter().enumerate() {
+                draw_item(ghl, *item, list_id, idx, ui, ui_state);
             }
         } else {
             ui.label(
@@ -272,6 +274,8 @@ fn draw_list<ItemId, ListId, T: Ghl<ItemId = ItemId, ListId = ListId>>(
 fn draw_item<ItemId, ListId, T: Ghl<ItemId = ItemId, ListId = ListId>>(
     ghl: &mut T,
     item_id: ItemId,
+    parent_list_id: ListId,
+    idx_in_parent_list: usize,
     ui: &mut egui::Ui,
     ui_state: &mut UiState<ItemId, ListId>,
 ) where
@@ -281,6 +285,7 @@ fn draw_item<ItemId, ListId, T: Ghl<ItemId = ItemId, ListId = ListId>>(
     if let Some(list_id) = ghl.get_child_list_id(item_id) {
         let mut item_dragging = false;
         let mut item_collapsed = false;
+        let mut item_deleted = false;
         let item_idx = *ui_state.dnd_idx;
 
         ui_state.item_iter.next(
@@ -291,8 +296,15 @@ fn draw_item<ItemId, ListId, T: Ghl<ItemId = ItemId, ListId = ListId>>(
             |ui, dnd_item| {
                 dnd_item.ui(ui, |ui, handle, item_state| {
                     item_dragging = item_state.dragged;
-                    item_collapsed = ghl.ui_item(item_id, ui, handle, item_dragging);
-                    if !item_collapsed && !item_dragging {
+                    (item_collapsed, item_deleted) = ghl.ui_item(
+                        item_id,
+                        parent_list_id,
+                        idx_in_parent_list,
+                        ui,
+                        handle,
+                        item_dragging,
+                    );
+                    if !item_deleted && !item_collapsed && !item_dragging {
                         ghl.ui_list_header(list_id, &UiListHeaderConfig::SubList, ui);
                     }
                 })
@@ -309,7 +321,7 @@ fn draw_item<ItemId, ListId, T: Ghl<ItemId = ItemId, ListId = ListId>>(
         );
         *ui_state.dnd_idx += 1;
 
-        if !item_collapsed && !item_dragging {
+        if !item_deleted && !item_collapsed && !item_dragging {
             draw_list(
                 ghl,
                 list_id,
