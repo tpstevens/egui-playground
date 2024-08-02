@@ -375,90 +375,109 @@ impl ghl::Ghl for ItemCache {
                 egui::Stroke::NONE
             };
 
+            let mut draw_ctx_menu = |ui_selected_item: &mut Option<ItemId>, ui: &mut egui::Ui| {
+                *ui_selected_item = Some(item_id);
+
+                if ui.button("Add item above").clicked() {
+                    add_item_to_list = Some((parent_list_id, ListPosition::At(idx_in_parent_list)));
+                    ui.close_menu();
+                }
+
+                if ui.button("Add item below").clicked() {
+                    add_item_to_list =
+                        Some((parent_list_id, ListPosition::At(idx_in_parent_list + 1)));
+                    ui.close_menu();
+                }
+
+                if ui.button("Add child item at start").clicked() {
+                    add_item_to_list = Some((item.children, ListPosition::Start));
+                    ui.close_menu();
+                };
+
+                if ui.button("Add child item at end").clicked() {
+                    add_item_to_list = Some((item.children, ListPosition::End));
+                    ui.close_menu();
+                }
+            };
+
             ui.push_id(item_id, |ui| {
-                egui::Frame::none().stroke(stroke).show(ui, |ui| {
-                    ui.horizontal(|ui| {
-                        handle.ui(ui, |ui| {
+                egui::Frame::none()
+                    .inner_margin(egui::Margin::same(1f32))
+                    .stroke(stroke)
+                    .show(ui, |ui| {
+                        ui.horizontal(|ui| {
+                            handle.ui(ui, |ui| {
+                                if collapsed_any {
+                                    ui.toggle_value(&mut item.ui_collapsed, ">");
+                                } else {
+                                    ui.toggle_value(&mut item.ui_collapsed, "v");
+                                }
+                                collapsed_any |= item.ui_collapsed;
+
+                                ui.label(format!(
+                                    "(item = {}) {} (list = {})",
+                                    item.id, item.title, item.children
+                                ));
+                            });
+
                             if collapsed_any {
-                                ui.toggle_value(&mut item.ui_collapsed, ">");
+                                ui.allocate_space(ui.available_size());
                             } else {
-                                ui.toggle_value(&mut item.ui_collapsed, "v");
-                            }
-                            collapsed_any |= item.ui_collapsed;
-
-                            ui.label(format!(
-                                "(item = {}) {} (list = {})",
-                                item.id, item.title, item.children
-                            ));
-                        });
-
-                        if !collapsed_any {
-                            ui.with_layout(
-                                egui::Layout::right_to_left(egui::Align::Center),
-                                |ui| {
-                                    let list_id = item.children;
-                                    match self.lists.get_mut(&list_id) {
-                                        Some(list) => {
-                                            if ui.button("x").clicked() {
-                                                if list.data.is_empty() {
-                                                    delete_item_from_list =
-                                                        Some((parent_list_id, item_id));
-                                                } else {
-                                                    self.ui_selected_item = Some(item_id);
-                                                    self.ui_modal_dialog =
-                                                        Some(ModalDialog::DeleteItemConfirmation(
-                                                            DeleteItemConfirmation {
-                                                                item: item_id,
-                                                                parent_list: parent_list_id,
-                                                            },
-                                                        ));
-                                                    modal_activated = true;
+                                ui.with_layout(
+                                    egui::Layout::right_to_left(egui::Align::Center),
+                                    |ui| {
+                                        let list_id = item.children;
+                                        match self.lists.get_mut(&list_id) {
+                                            Some(list) => {
+                                                if ui.button("x").clicked() {
+                                                    if list.data.is_empty() {
+                                                        delete_item_from_list =
+                                                            Some((parent_list_id, item_id));
+                                                    } else {
+                                                        self.ui_selected_item = Some(item_id);
+                                                        self.ui_modal_dialog = Some(
+                                                            ModalDialog::DeleteItemConfirmation(
+                                                                DeleteItemConfirmation {
+                                                                    item: item_id,
+                                                                    parent_list: parent_list_id,
+                                                                },
+                                                            ),
+                                                        );
+                                                        modal_activated = true;
+                                                    }
                                                 }
+
+                                                ui.add_sized(
+                                                    egui::Vec2::new(200f32, ui.available_size().y),
+                                                    |ui: &mut egui::Ui| {
+                                                        ui.text_edit_singleline(&mut list.sorted_by)
+                                                    },
+                                                );
+
+                                                let sorted_by_label_rect =
+                                                    ui.label("Sorted by: ").interact_rect;
+
+                                                // Capture right-clicks on "Sorted by" label
+                                                ui.interact(
+                                                    sorted_by_label_rect,
+                                                    egui::Id::new("label_sorted_by").with(item_id),
+                                                    egui::Sense::click(),
+                                                )
+                                                .context_menu(|ui| {
+                                                    draw_ctx_menu(&mut self.ui_selected_item, ui);
+                                                });
                                             }
-
-                                            ui.add_sized(
-                                                egui::Vec2::new(200f32, ui.available_size().y),
-                                                |ui: &mut egui::Ui| {
-                                                    ui.text_edit_singleline(&mut list.sorted_by)
-                                                },
-                                            );
-                                            ui.label("Sorted by: ");
+                                            None => {
+                                                ui.label(format!("List {list_id} not found!"));
+                                            }
                                         }
-                                        None => {
-                                            ui.label(format!("List {list_id} not found!"));
-                                        }
-                                    }
-                                },
-                            );
-                        }
-                    })
-                    .response
-                    .context_menu(|ui| {
-                        self.ui_selected_item = Some(item_id);
-
-                        if ui.button("Add item above").clicked() {
-                            add_item_to_list =
-                                Some((parent_list_id, ListPosition::At(idx_in_parent_list)));
-                            ui.close_menu();
-                        }
-
-                        if ui.button("Add item below").clicked() {
-                            add_item_to_list =
-                                Some((parent_list_id, ListPosition::At(idx_in_parent_list + 1)));
-                            ui.close_menu();
-                        }
-
-                        if ui.button("Add child item at start").clicked() {
-                            add_item_to_list = Some((item.children, ListPosition::Start));
-                            ui.close_menu();
-                        };
-
-                        if ui.button("Add child item at end").clicked() {
-                            add_item_to_list = Some((item.children, ListPosition::End));
-                            ui.close_menu();
-                        }
+                                    },
+                                );
+                            }
+                        })
+                        .response
+                        .context_menu(|ui| draw_ctx_menu(&mut self.ui_selected_item, ui));
                     });
-                });
 
                 if !ui.ctx().is_context_menu_open() && !modal_activated {
                     self.ui_selected_item = None;
@@ -491,35 +510,68 @@ impl ghl::Ghl for ItemCache {
             if let Some(list) = self.lists.get_mut(&list_id) {
                 let mut add_item_to_list: Option<ListPosition> = None;
 
+                let draw_ctx_menu = |list: &mut ItemList,
+                                     add_item: &mut Option<ListPosition>,
+                                     ui: &mut egui::Ui| {
+                    list.ui_outlined = true;
+
+                    if ui.button("Add item to start").clicked() {
+                        *add_item = Some(ListPosition::Start);
+                        ui.close_menu();
+                    };
+
+                    if ui.button("Add item to end").clicked() {
+                        *add_item = Some(ListPosition::End);
+                        ui.close_menu();
+                    }
+                };
+
                 let stroke = if list.ui_outlined {
                     egui::Stroke::new(1.0, egui::Color32::LIGHT_GRAY)
                 } else {
                     egui::Stroke::NONE
                 };
 
-                let response = egui::Frame::none()
+                egui::Frame::none()
+                    .inner_margin(egui::Margin::same(1f32))
                     .stroke(stroke)
                     .show(ui, |ui| {
-                        ui.horizontal(|ui| {
-                            ui.label("[placeholder root header]");
-                            ui.expand_to_include_x(ui.clip_rect().width());
+                        // Capture right-clicks on frame
+                        ui.interact(
+                            ui.clip_rect(),
+                            egui::Id::new("list_header_frame").with(list_id),
+                            egui::Sense::click(),
+                        )
+                        .context_menu(|ui| {
+                            draw_ctx_menu(list, &mut add_item_to_list, ui);
                         });
-                    })
-                    .response;
 
-                response.context_menu(|ui| {
-                    list.ui_outlined = true;
+                        ui.horizontal(|ui| {
+                            let button_response = ui.button("+");
+                            if button_response.clicked() {
+                                add_item_to_list = Some(ListPosition::Start);
+                            } else {
+                                // Capture right-clicks on button
+                                button_response.context_menu(|ui| {
+                                    draw_ctx_menu(list, &mut add_item_to_list, ui);
+                                });
+                            }
 
-                    if ui.button("Add item to start").clicked() {
-                        add_item_to_list = Some(ListPosition::Start);
-                        ui.close_menu();
-                    };
+                            let label_rect = ui
+                                .add(egui::Label::new("[placeholder root header]"))
+                                .interact_rect;
 
-                    if ui.button("Add item to end").clicked() {
-                        add_item_to_list = Some(ListPosition::End);
-                        ui.close_menu();
-                    }
-                });
+                            // Capture right-clicks on label
+                            ui.interact(
+                                label_rect,
+                                egui::Id::new("list_header_label").with(list_id),
+                                egui::Sense::click(),
+                            )
+                            .context_menu(|ui| draw_ctx_menu(list, &mut add_item_to_list, ui));
+
+                            ui.allocate_space(ui.available_size());
+                        });
+                    });
 
                 if !ui.ctx().is_context_menu_open() {
                     list.ui_outlined = false;
